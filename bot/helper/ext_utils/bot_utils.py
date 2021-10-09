@@ -98,13 +98,13 @@ def getAllDownload():
     return None
 
 def get_progress_bar_string(status):
-    completed = status.processed_bytes() / 8
-    total = status.size_raw() / 8
+    completed = status.processed_bytes() / 9
+    total = status.size_raw() / 9
     p = 0 if total == 0 else round(completed * 100 / total)
     p = min(max(p, 0), 100)
-    cFull = p // 8
+    cFull = p // 9
     p_str = '■' * cFull
-    p_str += '□' * (12 - cFull)
+    p_str += '□' * (11 - cFull)
     p_str = f"[{p_str}]"
     return p_str
 
@@ -121,8 +121,8 @@ def get_readable_message():
                 globals()['PAGE_NO'] -= 1
             start = COUNT
         for index, download in enumerate(list(download_dict.values())[start:], start=1):
-            msg += f"<b>Name:</b> <code>{download.name()}</code>"
-            msg += f"\n<b>Status:</b> <i>{download.status()}</i>"
+            msg += f"<b>Name:</b><code>{download.name()}</code>"
+            msg += f"\n<b>Status: </b><i>{download.status()}</i>"
             if download.status() not in [
                 MirrorStatus.STATUS_ARCHIVING,
                 MirrorStatus.STATUS_EXTRACTING,
@@ -135,8 +135,7 @@ def get_readable_message():
                     msg += f"\n<b>Uploaded:</b> {get_readable_file_size(download.processed_bytes())} of {download.size()}"
                 else:
                     msg += f"\n<b>Downloaded:</b> {get_readable_file_size(download.processed_bytes())} of {download.size()}"
-                msg += f"\n<b>Speed:</b> {download.speed()}"
-                msg += f"\n<b>ETA:</b> {download.eta()}"
+                msg += f"\n<b>Speed:</b> {download.speed()} | <b>ETA:</b> {download.eta()}"
                 try:
                     msg += f"\n<b>Seeders:</b> {download.aria_download().num_seeders}" \
                            f" | <b>Peers:</b> {download.aria_download().connections}"
@@ -148,7 +147,7 @@ def get_readable_message():
                 except:
                     pass
                 msg += f"\n<code>/{BotCommands.CancelMirror} {download.gid()}</code>"
-            msg += "\n___________________________\n"
+            msg += "\n\n"
             if STATUS_LIMIT is not None and index == STATUS_LIMIT:
                 break
         if STATUS_LIMIT is not None and dick_no > STATUS_LIMIT:
@@ -179,17 +178,6 @@ def turn(update, context):
             COUNT -= STATUS_LIMIT
             PAGE_NO -= 1
     message_utils.update_all_messages()
-
-def check_limit(size, limit):
-    LOGGER.info('Checking File/Folder Size...')
-    limit = limit.split(' ', maxsplit=1)
-    limitint = int(limit[0])
-    if 'G' in limit[1] or 'g' in limit[1]:
-        if size > limitint * 1024**3:
-            return True
-    elif 'T' in limit[1] or 't' in limit[1]:
-        if size > limitint * 1024**4:
-            return True
 
 def get_readable_time(seconds: int) -> str:
     result = ''

@@ -15,11 +15,11 @@ from torrentool.api import Torrent
 from telegram import InlineKeyboardMarkup
 from telegram.ext import CallbackQueryHandler
 
-from bot import download_dict, download_dict_lock, BASE_URL, dispatcher, get_client, TORRENT_DIRECT_LIMIT, TAR_UNZIP_LIMIT, STOP_DUPLICATE
+from bot import download_dict, download_dict_lock, BASE_URL, dispatcher, get_client, TORRENT_DIRECT_LIMIT, ZIP_UNZIP_LIMIT, STOP_DUPLICATE
 from bot.helper.mirror_utils.status_utils.qbit_download_status import QbDownloadStatus
 from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
 from bot.helper.telegram_helper.message_utils import *
-from bot.helper.ext_utils.bot_utils import setInterval, new_thread, MirrorStatus, getDownloadByGid, get_readable_file_size, check_limit
+from bot.helper.ext_utils.bot_utils import setInterval, new_thread, MirrorStatus, getDownloadByGid, get_readable_file_size
 from bot.helper.telegram_helper import button_build
 
 LOGGER = logging.getLogger(__name__)
@@ -133,7 +133,6 @@ class QbitTorrent:
         except Exception as e:
             LOGGER.error(str(e))
             sendMessage(str(e), listener.bot, listener.update)
-            self.client.torrents_delete(torrent_hashes=self.ext_hash, delete_files=True)
             self.client.auth_log_out()
 
 
@@ -161,8 +160,8 @@ class QbitTorrent:
                     qbname = str(os.listdir(f'{self.dire}')[0])
                     if qbname.endswith('.!qB'):
                         qbname = os.path.splitext(qbname)[0]
-                    if self.listener.isTar:
-                        qbname = qbname + ".zip" if self.listener.isZip else qbname + ".tar"
+                    if self.listener.isZip:
+                        qbname = qbname + ".zip"
                     if not self.listener.extract:
                         gd = GoogleDriveHelper()
                         qbmsg, button = gd.drive_list(qbname, True)
@@ -179,17 +178,17 @@ class QbitTorrent:
                     self.dupchecked = True
                 if not self.sizechecked:
                     limit = None
-                    if TAR_UNZIP_LIMIT is not None and (self.listener.isTar or self.listener.extract):
-                        mssg = f'Tar/Unzip limit is {TAR_UNZIP_LIMIT}'
-                        limit = TAR_UNZIP_LIMIT
+                    if ZIP_UNZIP_LIMIT is not None and (self.listener.isZip or self.listener.extract):
+                        mssg = f'Zip/Unzip limit is {ZIP_UNZIP_LIMIT}GB'
+                        limit = ZIP_UNZIP_LIMIT
                     elif TORRENT_DIRECT_LIMIT is not None:
-                        mssg = f'Torrent/Direct limit is {TORRENT_DIRECT_LIMIT}'
+                        mssg = f'Torrent limit is {TORRENT_DIRECT_LIMIT}GB'
                         limit = TORRENT_DIRECT_LIMIT
                     if limit is not None:
+                        LOGGER.info('Checking File/Folder Size...')
                         time.sleep(1)
                         size = tor_info.size
-                        result = check_limit(size, limit)
-                        if result:
+                        if size > limit * 1024**3:
                             self.client.torrents_pause(torrent_hashes=self.ext_hash)
                             time.sleep(0.3)
                             self.listener.onDownloadError(f"{mssg}.\nYour File/Folder size is {get_readable_file_size(size)}")
